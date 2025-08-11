@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Ottawa Weather Widget</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; background: white; padding: 20px; }
+    h1 { margin-bottom: 10px; }
+    .value { font-size: 32px; font-weight: bold; }
+    .alert { font-size: 20px; font-weight: bold; margin-top: 15px; color: white; padding: 10px; border-radius: 5px; display: none; }
+    .alert.red { background-color: #c0392b; }
+    .alert.orange { background-color: #e67e22; }
+    .alert.blue { background-color: #2980b9; }
+  </style>
+</head>
+<body>
+  <h1>Ottawa Weather</h1>
+  <div>Temperature: <span id="temp" class="value">--</span> °C</div>
+  <div>Humidity: <span id="humidity" class="value">--</span> %</div>
+  <div>Wind: <span id="wind" class="value">--</span> km/h</div>
+  <div>Rain (24h): <span id="rain" class="value">--</span> mm</div>
+  <div id="alertBox" class="alert"></div>
+
+  <script>
+    const apiKey = "510ed6ca76b62e710b17ae073e1e95cd";
+    const lat = 45.4215;
+    const lon = -75.6972;
+    const units = "metric";
+
+    function updateWeather() {
+      fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`)
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("temp").textContent = data.main.temp.toFixed(1);
+          document.getElementById("humidity").textContent = data.main.humidity;
+          document.getElementById("wind").textContent = (data.wind.speed * 3.6).toFixed(1);
+          checkAlerts(parseFloat(data.main.temp), parseFloat((data.wind.speed * 3.6).toFixed(1)));
+        });
+
+      fetch(`https://api.openweathermap.org/data/2.5/onecall?lat=${lat}&lon=${lon}&units=${units}&appid=${apiKey}`)
+        .then(res => res.json())
+        .then(data => {
+          let totalRain = 0;
+          if (data.hourly) {
+            for (let i = 0; i < 24 && i < data.hourly.length; i++) {
+              if (data.hourly[i].rain && data.hourly[i].rain["1h"]) {
+                totalRain += data.hourly[i].rain["1h"];
+              }
+            }
+          }
+          document.getElementById("rain").textContent = totalRain.toFixed(1);
+          checkRainAlert(totalRain);
+        });
+    }
+
+    function checkAlerts(temp, wind) {
+      const alertBox = document.getElementById("alertBox");
+      alertBox.style.display = "none";
+
+      if (temp > 30) {
+        alertBox.textContent = "Extreme Heat Alert";
+        alertBox.className = "alert red";
+        alertBox.style.display = "block";
+      } else if (temp < -20) {
+        alertBox.textContent = "Extreme Cold Alert";
+        alertBox.className = "alert.blue";
+        alertBox.style.display = "block";
+      } else if (wind > 40) {
+        alertBox.textContent = "High Wind Alert";
+        alertBox.className = "alert.orange";
+        alertBox.style.display = "block";
+      }
+    }
+
+    function checkRainAlert(totalRain) {
+      const alertBox = document.getElementById("alertBox");
+      if (totalRain > 10) {
+        alertBox.textContent = "Heavy Rain Alert";
+        alertBox.className = "alert.blue";
+        alertBox.style.display = "block";
+      }
+    }
+
+    updateWeather();
+    setInterval(updateWeather, 300000);
+  </script>
+</body>
+</html>
